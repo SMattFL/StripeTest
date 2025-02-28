@@ -1,7 +1,45 @@
 ﻿@page "/"
 
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
 <PageTitle>Home</PageTitle>
 
 <h1>Hello, Stripe!</h1>
 
+<button @onclick="() => InitiatePayment(eth_fileName)">Buy ETH!</button>
 
+
+@code{
+    private async Task InitiatePayment(string fileName)
+    {
+        // Call your Azure Function to create a Stripe Checkout session
+        var response = await Http.PostAsJsonAsync("api/createcheckoutsession", new
+        {
+            productName = "ETH",
+            amount = 420,
+            fileName = fileName
+        });
+
+        if (response.IsSuccessStatusCode)
+        {
+            // Read the session URL from the Azure Function response
+            var checkoutSession = await response.Content.ReadFromJsonAsync<CheckoutSessionResponse>();
+
+            // Redirect to Stripe Checkout
+            Navigation.NavigateTo(checkoutSession.Url, forceLoad: true);
+        }
+        else
+        {
+            // Handle errors here
+            Console.WriteLine("Error initiating payment.");
+        }
+    }
+
+    private class CheckoutSessionResponse
+    {
+        public string Url { get; set; }
+    }
+
+    private const string eth_fileName = "ETH.jpg";
+}

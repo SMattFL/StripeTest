@@ -1,0 +1,75 @@
+﻿@page "/success"
+
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<PageTitle>Transaction Success</PageTitle>
+
+<h1>@message</h1>
+
+@if (!string.IsNullOrEmpty(filePath))
+{
+    <h5>@fileTitle</h5>
+
+    <img src="@filePath" alt="ETH">
+}
+else
+{
+    <p>You can't have the ETH...</p>
+}
+
+
+@code {
+    private string message = "Verifying transaction...";
+    private string filePath;
+    private string fileTitle;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Extract the session_id from the query string
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var queryParams = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+
+        if (queryParams.TryGetValue("session_id", out var sessionId))
+        {
+            // Fetch session details from your backend API (Azure Function)
+            try
+            {
+                var response = await Http.GetFromJsonAsync<StripeSessionResult>($"/api/VerifyCheckoutSession?session_id={sessionId}");
+
+                if (response != null && response.IsValid)
+                {
+                    var fileName = "UnknownFileName";
+                    if (queryParams.TryGetValue("fileName", out var fileNameFromQuery))
+                    {
+                        fileName = fileNameFromQuery;
+                    }
+
+                    filePath = $"files/{fileName}";
+                    fileTitle = fileName;
+
+                    message = $"Thank you for your purchase!";
+                }
+                else
+                {
+                    message = "Transaction failed.";
+                }
+            }
+            catch (Exception ex)
+            {
+                message = "Error verifying transaction: " + ex.Message;
+            }
+        }
+        else
+        {
+            message = "No session ID provided in the URL.";
+        }
+    }    
+
+    private class StripeSessionResult
+    {
+        public bool IsValid { get; set; }
+        public string SessionId { get; set; }
+    }
+}
