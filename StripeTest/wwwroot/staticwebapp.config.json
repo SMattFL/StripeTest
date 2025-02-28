@@ -1,0 +1,8 @@
+{
+  "routes": [],
+
+  "navigationFallback": {
+    "rewrite": "/",
+    "exclude": [ "/api/*" ] // This ensures API routes aren't rewritten
+  }
+}
